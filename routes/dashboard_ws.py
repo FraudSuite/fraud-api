@@ -81,7 +81,7 @@ async def start_stream(db: Session = Depends(get_db)):
                         	city=tx["city"], 
                         	merchant=tx["merchant"], 
                         	card_last4=tx["card_last4"],
-                            amount=f"{str(tx["amount"])}$",
+                            amount=f"{str(tx['amount'])}$",
                         	is_fraud=results["random_forest"]["prediction"],
                         	score=results.get("random_forest", {}).get("probability", {})
                         )
