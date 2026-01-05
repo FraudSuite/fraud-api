@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, desc
 from datetime import datetime
 
-from fraud_detection.shared.db.models import FraudTransaction, ModelMetrics, Base
-from fraud_detection.shared.config.database import get_db
+from shared.db.models import FraudTransaction, ModelMetrics, Base
+from shared.config.database import get_db
 from dateutil.relativedelta import relativedelta
 
 router = APIRouter()
@@ -22,7 +22,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 MODEL_DIR = PROJECT_DIR / "models"
 
 
-from fraud_detection.shared.schemas.model_schema import ModelMetricsSchema
+from shared.schemas.model_schema import ModelMetricsSchema
 
 connected_clients: List[WebSocket] = []
 
