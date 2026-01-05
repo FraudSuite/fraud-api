@@ -10,7 +10,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 MODEL_DIR = PROJECT_DIR / "models"
 
 
-from fraud_detection.schemas.predict_schema import PredictRequest
+from schemas.predict_schema import PredictRequest
 
 
 models = joblib.load(MODEL_DIR / "all_sklearn_models.pkl")
