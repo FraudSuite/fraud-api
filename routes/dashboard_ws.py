@@ -13,13 +13,17 @@ from sqlalchemy import func, extract, desc
 from datetime import datetime
 
 from shared.db.models import FraudTransaction, ModelMetrics, Base
-from shared.config.database import get_db
+from shared.config.database import get_db, SessionLocal
 from dateutil.relativedelta import relativedelta
 
 router = APIRouter()
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 MODEL_DIR = PROJECT_DIR / "models"
+
+
+STREAM_URL = "ws://localhost:8001/stream"
+
 
 
 from shared.schemas.model_schema import ModelMetricsSchema
@@ -38,17 +42,17 @@ def run_prediction(tx):
         results[name] = {"prediction": pred, "probability": float(proba)}
     return results
 
-# WebSocket endpoint
+
+
+
 @router.websocket("/dashboard")
 async def dashboard_ws(client_ws: WebSocket):
     await client_ws.accept()
     connected_clients.append(client_ws)
-    print("Client ++++++++++++++++",client_ws)
     try:
         while True:
             await client_ws.receive_text()
     except Exception:
-        print("Client disconnected")
         if client_ws in connected_clients:
             connected_clients.remove(client_ws)
 
@@ -56,34 +60,33 @@ async def broadcast_to_dashboards(data: dict):
     disconnected = []
     for client in connected_clients:
         try:
-            print("BRAODCASET ADATA+++++++++==========", data)
             await client.send_json(data)
         except:
             disconnected.append(client)
     for c in disconnected:
         connected_clients.remove(c)
 
-@router.get("/start-stream")
-async def start_stream(db: Session = Depends(get_db)):
-    url = "ws://localhost:8001/stream"
 
-    async def listen():
-        while True:
-            try:
-                async with websockets.connect(url) as ws:
-                    async for message in ws:
-                        tx = json.loads(message)
-                        results = run_prediction(tx)
-                        processed = {"transaction": tx, "predictions": results}
-                        print("PROBA: ", results)
+
+async def stream_listener():
+    while True:
+        try:
+            async with websockets.connect(STREAM_URL) as ws:
+                async for message in ws:
+                    tx = json.loads(message)
+                    results = run_prediction(tx)
+                    processed = {"transaction": tx, "predictions": results}
+                    db = SessionLocal()
+                    try:
+
                         new_fraud_transaction = FraudTransaction(txn_id=tx["txn_id"], 
-                        	country=tx["country"], 
-                        	city=tx["city"], 
-                        	merchant=tx["merchant"], 
-                        	card_last4=tx["card_last4"],
+                            country=tx["country"], 
+                            city=tx["city"], 
+                            merchant=tx["merchant"], 
+                            card_last4=tx["card_last4"],
                             amount=f"{str(tx['amount'])}$",
-                        	is_fraud=results["random_forest"]["prediction"],
-                        	score=results.get("random_forest", {}).get("probability", {})
+                            is_fraud=results["random_forest"]["prediction"],
+                            score=results.get("random_forest", {}).get("probability", {})
                         )
 
                         db.add(new_fraud_transaction)
@@ -91,12 +94,13 @@ async def start_stream(db: Session = Depends(get_db)):
                         db.refresh(new_fraud_transaction)
 
                         await broadcast_to_dashboards(processed)
-            except Exception as e:
-                print("Error: ", e)
-                await asyncio.sleep(5)  # retry after delay
+                    finally:
+                        db.close()
+        except Exception as e:
+            print("Stream error:", e)
+            await asyncio.sleep(5)
 
-    asyncio.create_task(listen())
-    return {"status": "streaming started"}
+
 
 
 
@@ -133,7 +137,7 @@ def dashboard_data(month: int = None, db: Session = Depends(get_db)):
             "id": t.txn_id,
             "amount": t.amount,  # replace with actual amount if needed
             "risk": "High" if t.score > 0.8 else "Medium" if t.score > 0.5 else "Low",
-            "time": t.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            "time": t.created_at.isoformat()
         } for t in recent_detections_query
     ]
 

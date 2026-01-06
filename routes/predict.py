@@ -26,15 +26,17 @@ def predict(data: PredictRequest):
         data.v20, data.v21, data.v22, data.v23, data.v24, data.v25, data.v26, data.v27, data.v28
     ]])
 
-    results = {}
 
-    for name, model in models.items():
-        proba = float(model.predict_proba(X)[0][1])
-        pred = int(proba > 0.5)
+    model = models["random_forest"]  # 👈 choose best
+    proba = float(model.predict_proba(X)[0][1])
+    pred = int(proba > 0.5)
 
-        results[name] = {
+
+
+    return {
+        "results": {
             "prediction": pred,
-            "probability": proba
+            "probability": proba,
+            "factors": []
         }
-
-    return {"results": results}
+    }
