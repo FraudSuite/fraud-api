@@ -52,7 +52,7 @@ async def dashboard_ws(client_ws: WebSocket):
     connected_clients.append(client_ws)
     try:
         while True:
-            await client_ws.receive_text()
+            await asyncio.sleep(60)
     except Exception:
         if client_ws in connected_clients:
             connected_clients.remove(client_ws)
