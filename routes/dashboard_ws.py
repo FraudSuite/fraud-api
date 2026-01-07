@@ -7,6 +7,7 @@ import websockets
 import json
 import numpy as np
 import sys
+import pandas as pd
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, desc
@@ -15,12 +16,12 @@ from datetime import datetime
 from shared.db.models import FraudTransaction, ModelMetrics, Base
 from shared.config.database import get_db, SessionLocal
 from dateutil.relativedelta import relativedelta
+import ssl
 
 router = APIRouter()
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 MODEL_DIR = PROJECT_DIR / "models"
-
 
 STREAM_URL = "wss://transaction-generator.onrender.com/stream"
 
@@ -34,7 +35,7 @@ models = joblib.load(MODEL_DIR / "all_sklearn_models.pkl")
 columns = ["Time"] + [f"V{i}" for i in range(1, 29)] + ["Amount"]
 
 def run_prediction(tx):
-    X = np.array([tx[col] for col in columns]).reshape(1, -1)
+    X = pd.DataFrame([[tx[col] for col in columns]], columns=columns)
     results = {}
     for name, model in models.items():
         proba = model.predict_proba(X)[0][1]
@@ -73,14 +74,17 @@ async def stream_listener():
         try:
             async with websockets.connect(
                     STREAM_URL,
+                    ssl=True,
                     ping_interval=15,
                     ping_timeout=15,
                     close_timeout=5
                 ) as ws:
+                print("COnnected")
                 async for message in ws:
                     tx = json.loads(message)
                     results = run_prediction(tx)
                     processed = {"transaction": tx, "predictions": results}
+                    print(processed)
                     db = SessionLocal()
                     try:
 
