@@ -71,7 +71,12 @@ async def broadcast_to_dashboards(data: dict):
 async def stream_listener():
     while True:
         try:
-            async with websockets.connect(STREAM_URL) as ws:
+            async with websockets.connect(
+                    STREAM_URL,
+                    ping_interval=15,
+                    ping_timeout=15,
+                    close_timeout=5
+                ) as ws:
                 async for message in ws:
                     tx = json.loads(message)
                     results = run_prediction(tx)
