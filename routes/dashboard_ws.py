@@ -22,7 +22,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 MODEL_DIR = PROJECT_DIR / "models"
 
 
-STREAM_URL = "ws://transaction-generator.onrender.com/stream"
+STREAM_URL = "wss://transaction-generator.onrender.com/stream"
 
 
 
